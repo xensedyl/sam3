@@ -141,10 +141,10 @@ class BitMasks:
         if isinstance(item, int):
             return BitMasks(self.tensor[item].unsqueeze(0))
         m = self.tensor[item]
-        assert m.dim() == 3, (
-            "Indexing on BitMasks with {} returns a tensor with shape {}!".format(
-                item, m.shape
-            )
+        assert (
+            m.dim() == 3
+        ), "Indexing on BitMasks with {} returns a tensor with shape {}!".format(
+            item, m.shape
         )
         return BitMasks(m)
 

@@ -81,9 +81,9 @@ class Sam3Processor:
         if not isinstance(images, list):
             raise ValueError("Images must be a list of PIL images or tensors")
         assert len(images) > 0, "Images list must not be empty"
-        assert isinstance(images[0], PIL.Image.Image), (
-            "Images must be a list of PIL images"
-        )
+        assert isinstance(
+            images[0], PIL.Image.Image
+        ), "Images must be a list of PIL images"
 
         state["original_heights"] = [image.height for image in images]
         state["original_widths"] = [image.width for image in images]

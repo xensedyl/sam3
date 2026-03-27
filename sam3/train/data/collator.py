@@ -216,9 +216,9 @@ def collate_fn_api(
                 text_batch.append(q.query_text)
             stages[stage_id].text_ids.append(text_batch.index(q.query_text))
 
-            assert q.inference_metadata is not None, (
-                "inference_metadata must be provided when FindQueryLoaded is created."
-            )
+            assert (
+                q.inference_metadata is not None
+            ), "inference_metadata must be provided when FindQueryLoaded is created."
             for f in fields(q.inference_metadata):
                 getattr(find_metadatas[stage_id], f.name).append(
                     getattr(q.inference_metadata, f.name)

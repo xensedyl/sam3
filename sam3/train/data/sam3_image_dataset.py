@@ -233,9 +233,9 @@ class CustomCocoDetectionAPI(VisionDataset):
         if self.coco is not None:
             return
 
-        assert g_pathmgr.isfile(self.annFile), (
-            f"please provide valid annotation file. Missing: {self.annFile}"
-        )
+        assert g_pathmgr.isfile(
+            self.annFile
+        ), f"please provide valid annotation file. Missing: {self.annFile}"
         annFile = g_pathmgr.get_local_path(self.annFile)
 
         if self.coco is not None:
@@ -325,9 +325,9 @@ class CustomCocoDetectionAPI(VisionDataset):
         else:
             num_queries_per_stage = stage2num_queries.most_common(1)[0][1]
         for stage, num_queries in stage2num_queries.items():
-            assert num_queries == num_queries_per_stage, (
-                f"Number of queries in stage {stage} is {num_queries}, expected {num_queries_per_stage}"
-            )
+            assert (
+                num_queries == num_queries_per_stage
+            ), f"Number of queries in stage {stage} is {num_queries}, expected {num_queries_per_stage}"
 
         for query in queries:
             h, w = id2imsize[query["image_id"]]

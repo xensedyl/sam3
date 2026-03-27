@@ -249,9 +249,9 @@ class RandomGeometricInputsAPI:
     def _get_target_object(self, datapoint, query):
         img = datapoint.images[query.image_id]
         targets = query.object_ids_output
-        assert len(targets) == 1, (
-            "Geometric queries only support a single target object."
-        )
+        assert (
+            len(targets) == 1
+        ), "Geometric queries only support a single target object."
         target_idx = targets[0]
         return img.objects[target_idx]
 

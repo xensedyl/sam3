@@ -296,9 +296,9 @@ def agent_inference(
             assert LATEST_SAM3_TEXT_PROMPT != ""
 
             # Make sure that the last message is a image
-            assert messages[-1]["content"][1]["type"] == "image", (
-                "Second content element should be an image"
-            )
+            assert (
+                messages[-1]["content"][1]["type"] == "image"
+            ), "Second content element should be an image"
             messages.pop()  # Remove the last user message
             # Add simplified replacement message
             simplified_message = {
