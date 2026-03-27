@@ -182,45 +182,45 @@ def multi_head_attention_forward(
             raise AssertionError(
                 "only bool and floating types of key_padding_mask are supported"
             )
-    assert (
-        embed_dim == embed_dim_to_check
-    ), f"was expecting embedding dimension of {embed_dim_to_check}, but got {embed_dim}"
+    assert embed_dim == embed_dim_to_check, (
+        f"was expecting embedding dimension of {embed_dim_to_check}, but got {embed_dim}"
+    )
     if isinstance(embed_dim, torch.Tensor):
         head_dim = embed_dim.div(num_heads, rounding_mode="trunc")
     else:
         head_dim = embed_dim // num_heads
-    assert (
-        head_dim * num_heads == embed_dim
-    ), f"embed_dim {embed_dim} not divisible by num_heads {num_heads}"
+    assert head_dim * num_heads == embed_dim, (
+        f"embed_dim {embed_dim} not divisible by num_heads {num_heads}"
+    )
     if use_separate_proj_weight:
-        assert (
-            key.shape[:2] == value.shape[:2]
-        ), f"key's sequence and batch dims {key.shape[:2]} do not match value's {value.shape[:2]}"
+        assert key.shape[:2] == value.shape[:2], (
+            f"key's sequence and batch dims {key.shape[:2]} do not match value's {value.shape[:2]}"
+        )
     else:
-        assert (
-            key.shape == value.shape
-        ), f"key shape {key.shape} does not match value shape {value.shape}"
+        assert key.shape == value.shape, (
+            f"key shape {key.shape} does not match value shape {value.shape}"
+        )
 
     #
     # compute in-projection
     #
     if not use_separate_proj_weight:
-        assert (
-            in_proj_weight is not None
-        ), "use_separate_proj_weight is False but in_proj_weight is None"
+        assert in_proj_weight is not None, (
+            "use_separate_proj_weight is False but in_proj_weight is None"
+        )
         q, k, v = F._in_projection_packed(
             query, key, value, in_proj_weight, in_proj_bias
         )
     else:
-        assert (
-            q_proj_weight is not None
-        ), "use_separate_proj_weight is True but q_proj_weight is None"
-        assert (
-            k_proj_weight is not None
-        ), "use_separate_proj_weight is True but k_proj_weight is None"
-        assert (
-            v_proj_weight is not None
-        ), "use_separate_proj_weight is True but v_proj_weight is None"
+        assert q_proj_weight is not None, (
+            "use_separate_proj_weight is True but q_proj_weight is None"
+        )
+        assert k_proj_weight is not None, (
+            "use_separate_proj_weight is True but k_proj_weight is None"
+        )
+        assert v_proj_weight is not None, (
+            "use_separate_proj_weight is True but v_proj_weight is None"
+        )
         if in_proj_bias is None:
             b_q = b_k = b_v = None
         else:
@@ -245,9 +245,9 @@ def multi_head_attention_forward(
             )
             attn_mask = attn_mask.to(torch.bool)
         else:
-            assert (
-                attn_mask.is_floating_point() or attn_mask.dtype == torch.bool
-            ), f"Only float, byte, and bool types are supported for attn_mask, not {attn_mask.dtype}"
+            assert attn_mask.is_floating_point() or attn_mask.dtype == torch.bool, (
+                f"Only float, byte, and bool types are supported for attn_mask, not {attn_mask.dtype}"
+            )
         # ensure attn_mask's dim is 3
         if attn_mask.dim() == 2:
             correct_2d_size = (tgt_len, src_len)
@@ -288,22 +288,22 @@ def multi_head_attention_forward(
     if static_k is None:
         k = k.contiguous().view(k.shape[0], bsz * num_heads, head_dim).transpose(0, 1)
     else:
-        assert (
-            static_k.size(0) == bsz * num_heads
-        ), f"expecting static_k.size(0) of {bsz * num_heads}, but got {static_k.size(0)}"
-        assert (
-            static_k.size(2) == head_dim
-        ), f"expecting static_k.size(2) of {head_dim}, but got {static_k.size(2)}"
+        assert static_k.size(0) == bsz * num_heads, (
+            f"expecting static_k.size(0) of {bsz * num_heads}, but got {static_k.size(0)}"
+        )
+        assert static_k.size(2) == head_dim, (
+            f"expecting static_k.size(2) of {head_dim}, but got {static_k.size(2)}"
+        )
         k = static_k
     if static_v is None:
         v = v.contiguous().view(v.shape[0], bsz * num_heads, head_dim).transpose(0, 1)
     else:
-        assert (
-            static_v.size(0) == bsz * num_heads
-        ), f"expecting static_v.size(0) of {bsz * num_heads}, but got {static_v.size(0)}"
-        assert (
-            static_v.size(2) == head_dim
-        ), f"expecting static_v.size(2) of {head_dim}, but got {static_v.size(2)}"
+        assert static_v.size(0) == bsz * num_heads, (
+            f"expecting static_v.size(0) of {bsz * num_heads}, but got {static_v.size(0)}"
+        )
+        assert static_v.size(2) == head_dim, (
+            f"expecting static_v.size(2) of {head_dim}, but got {static_v.size(2)}"
+        )
         v = static_v
 
     # add zero attention along batch dimension (now first)
@@ -325,13 +325,12 @@ def multi_head_attention_forward(
 
     # merge key padding and attention masks
     if key_padding_mask is not None:
-        assert (
-            key_padding_mask.shape
-            == (
-                bsz,
-                src_len,
-            )
-        ), f"expecting key_padding_mask shape of {(bsz, src_len)}, but got {key_padding_mask.shape}"
+        assert key_padding_mask.shape == (
+            bsz,
+            src_len,
+        ), (
+            f"expecting key_padding_mask shape of {(bsz, src_len)}, but got {key_padding_mask.shape}"
+        )
         key_padding_mask = (
             key_padding_mask.view(bsz, 1, 1, src_len)
             .expand(-1, num_heads, -1, -1)
@@ -365,15 +364,14 @@ def multi_head_attention_forward(
             attn_mask = attn_mask.view(bsz, num_heads, -1, src_len)
 
     if attn_bias is not None:
-        assert (
-            attn_bias.shape
-            == (
-                bsz,
-                num_heads,
-                tgt_len,
-                src_len,
-            )
-        ), f"expecting attn_bias shape of {(bsz, num_heads, tgt_len, src_len)}, but got {attn_bias.shape}"
+        assert attn_bias.shape == (
+            bsz,
+            num_heads,
+            tgt_len,
+            src_len,
+        ), (
+            f"expecting attn_bias shape of {(bsz, num_heads, tgt_len, src_len)}, but got {attn_bias.shape}"
+        )
         if attn_mask is None:
             attn_mask = attn_bias
         else:
@@ -487,13 +485,13 @@ class MultiheadAttention(nn.Module):
         self.batch_first = batch_first
         self.head_dim = embed_dim // num_heads
         self.use_act_checkpoint = use_act_checkpoint
-        assert (
-            self.head_dim * num_heads == self.embed_dim
-        ), "embed_dim must be divisible by num_heads"
+        assert self.head_dim * num_heads == self.embed_dim, (
+            "embed_dim must be divisible by num_heads"
+        )
 
-        assert (
-            attn_type == AttentionType.Sparse or sparsity == 0.0
-        ), "sparsity is only supported for sparse attention"
+        assert attn_type == AttentionType.Sparse or sparsity == 0.0, (
+            "sparsity is only supported for sparse attention"
+        )
 
         if not self._qkv_same_embed_dim:
             self.q_proj_weight = nn.Parameter(
@@ -1007,9 +1005,9 @@ class SAM3Output(list):
             self.output = output
         else:
             self.output = []
-        assert isinstance(
-            iter_mode, SAM3Output.IterMode
-        ), f"iter_mode shoulf be of enum type 'SAM3Output.IterMode'. Got {type(iter_mode)}"
+        assert isinstance(iter_mode, SAM3Output.IterMode), (
+            f"iter_mode shoulf be of enum type 'SAM3Output.IterMode'. Got {type(iter_mode)}"
+        )
 
         self.iter_mode = iter_mode
         # We create a weak reference to self to be used in the lambda functions.
@@ -1088,9 +1086,9 @@ class SAM3Output(list):
         return SAM3Output._IterationMode(model_output=model_output, iter_mode=iter_mode)
 
     def append(self, item: list):
-        assert isinstance(
-            item, list
-        ), f"Only list items are supported. Got {type(item)}"
+        assert isinstance(item, list), (
+            f"Only list items are supported. Got {type(item)}"
+        )
         self.output.append(item)
 
     def __repr__(self):

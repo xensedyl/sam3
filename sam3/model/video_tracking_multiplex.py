@@ -318,9 +318,9 @@ class VideoTrackingMultiplex(nn.Module):
         ):
             # if there is compression of memories along channel dim
             mem_dim = self.maskmem_backbone.out_proj.weight.shape[0]
-            assert (
-                mem_dim == self.hidden_dim
-            ), "there should be no compression of memory embeddings"
+            assert mem_dim == self.hidden_dim, (
+                "there should be no compression of memory embeddings"
+            )
         self.num_maskmem = num_maskmem  # Number of memories accessible
         # Temporal encoding of the memories
         self.sincos_tpos_enc = sincos_tpos_enc
@@ -396,9 +396,9 @@ class VideoTrackingMultiplex(nn.Module):
         self.forward_backbone_per_frame_for_eval = forward_backbone_per_frame_for_eval
         self.offload_output_to_cpu_for_eval = offload_output_to_cpu_for_eval
         if trim_past_non_cond_mem_for_eval:
-            assert (
-                num_frames_to_correct_for_eval <= 1
-            ), "trim_past_non_cond_mem_for_eval=True requires that only the first frame receives prompts"
+            assert num_frames_to_correct_for_eval <= 1, (
+                "trim_past_non_cond_mem_for_eval=True requires that only the first frame receives prompts"
+            )
         self.trim_past_non_cond_mem_for_eval = trim_past_non_cond_mem_for_eval
         self.sam_mask_decoder_extra_args = sam_mask_decoder_extra_args
         self.interactive_sam_mask_decoder_extra_args = (
@@ -940,9 +940,9 @@ class VideoTrackingMultiplex(nn.Module):
         # Use -10/+10 as logits for neg/pos pixels (very close to 0/1 in prob after sigmoid).
         out_scale, out_bias = 20.0, -10.0  # sigmoid(-10.0)=4.5398e-05
         mask_inputs_float = mask_inputs.to(backbone_features.dtype)
-        assert mask_inputs.shape[0] == len(
-            objects_in_mask
-        ), f"{mask_inputs.shape[0]} != {len(objects_in_mask)}"
+        assert mask_inputs.shape[0] == len(objects_in_mask), (
+            f"{mask_inputs.shape[0]} != {len(objects_in_mask)}"
+        )
         high_res_masks = mask_inputs_float * out_scale + out_bias
         low_res_masks = F.interpolate(
             high_res_masks,
@@ -1541,9 +1541,9 @@ class VideoTrackingMultiplex(nn.Module):
                         # expand to batch size
                         obj_pos = obj_pos.unsqueeze(1).expand(-1, B, -1)
 
-                        assert (
-                            self.mem_dim == C
-                        ), f"obj_ptrs.shape = {obj_ptrs.shape}, C = {C}"
+                        assert self.mem_dim == C, (
+                            f"obj_ptrs.shape = {obj_ptrs.shape}, C = {C}"
+                        )
 
                         # each frame has [bucket_size] pointers, except the first frame
                         obj_pos = obj_pos.repeat_interleave(
@@ -1640,9 +1640,9 @@ class VideoTrackingMultiplex(nn.Module):
             )
         if self.apply_sigmoid_to_mask_logits_for_mem_enc:
             # scale the raw mask logits with a temperature before applying sigmoid
-            assert (
-                not self.binarize_mask_from_pts_for_mem_enc
-            ), "haven't been trained this way; beware of hardcoded config override"
+            assert not self.binarize_mask_from_pts_for_mem_enc, (
+                "haven't been trained this way; beware of hardcoded config override"
+            )
             binarize = self.binarize_mask_from_pts_for_mem_enc and is_mask_from_pts
             if binarize and not self.training:
                 mask_for_mem = (pred_masks_high_res > 0).float()
@@ -1962,9 +1962,9 @@ class VideoTrackingMultiplex(nn.Module):
         elif point_inputs is not None:
             # Case 3a: Refining existing predictions
             if prev_sam_mask_logits is not None:
-                assert (
-                    objects_to_interact is not None
-                ), "objects_to_interact must be specified when refining with prev_sam_mask_logits"
+                assert objects_to_interact is not None, (
+                    "objects_to_interact must be specified when refining with prev_sam_mask_logits"
+                )
                 mode = "interaction_only"
             # Case 3b: Initial conditioning frame
             elif is_init_cond_frame:
@@ -2271,9 +2271,9 @@ class VideoTrackingMultiplex(nn.Module):
                     method="uniform" if self.training else self.pt_sampling_for_eval,
                 )
                 point_inputs = concat_points(point_inputs, new_points, new_labels)
-                assert low_res_masks.shape[0] > max(
-                    objects_to_interact
-                ), f"interacting {objects_to_interact} in {low_res_masks.shape}?"
+                assert low_res_masks.shape[0] > max(objects_to_interact), (
+                    f"interacting {objects_to_interact} in {low_res_masks.shape}?"
+                )
                 if self.iter_use_prev_mask_pred:
                     # Feed the mask logits of the previous SAM outputs in the next SAM decoder step.
                     # For tracking, this means that when the user adds a correction click, we also feed
@@ -2858,9 +2858,9 @@ class VideoTrackingDynamicMultiplex(VideoTrackingMultiplex):
             else:
                 # During evaluation, this should only happen for YouTubeVOS.
                 # We will skip the frames before the first conditional frame.
-                assert (
-                    self.is_dynamic_vos_evaluation
-                ), f"{visible_objects_per_frame=} invalid"
+                assert self.is_dynamic_vos_evaluation, (
+                    f"{visible_objects_per_frame=} invalid"
+                )
                 assert len(init_cond_frames) == 1
                 for stage_id in range(start_frame_idx, num_frames):
                     if len(visible_objects_per_frame[stage_id]) > 0:
@@ -3525,13 +3525,14 @@ class VideoTrackingDynamicMultiplex(VideoTrackingMultiplex):
                 new_object_idxs = new_idx_per_transition[stage_id]
                 # Get the new object masks, ensure correct ordering
                 assert sorted(new_object_idxs) == new_object_idxs
-                assert (
-                    new_object_idxs[0]
-                    == len(valid_objects_prior_to_each_transition[stage_id])
-                ), f"{new_object_idxs=}; {gt_masks.shape=}; {valid_objects_prior_to_each_transition[stage_id]=}"
-                assert new_object_idxs[-1] == (
-                    len(gt_masks) - 1
-                ), f"{new_object_idxs=}; {gt_masks.shape=}"
+                assert new_object_idxs[0] == len(
+                    valid_objects_prior_to_each_transition[stage_id]
+                ), (
+                    f"{new_object_idxs=}; {gt_masks.shape=}; {valid_objects_prior_to_each_transition[stage_id]=}"
+                )
+                assert new_object_idxs[-1] == (len(gt_masks) - 1), (
+                    f"{new_object_idxs=}; {gt_masks.shape=}"
+                )
                 new_object_masks = gt_masks[new_object_idxs]
 
                 # Remove the new objects from the gt masks

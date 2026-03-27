@@ -93,22 +93,22 @@ class MultiplexState:
         # check the validity of the object IDs
         self.object_ids = object_ids
         if self.object_ids is not None:
-            assert (
-                len(self.object_ids) == self.total_valid_entries
-            ), "object_ids should map 1:1 to the valid entries"
+            assert len(self.object_ids) == self.total_valid_entries, (
+                "object_ids should map 1:1 to the valid entries"
+            )
 
         # check the validity of the assignments
         all_object_idxs = set()
         for bucket in self.assignments:
             valid_entries_in_bucket = sum(1 for x in bucket if x != _PADDING_NUM)
-            assert (
-                valid_entries_in_bucket <= self.allowed_bucket_capacity
-            ), f"{valid_entries_in_bucket=} > {self.allowed_bucket_capacity=}"
+            assert valid_entries_in_bucket <= self.allowed_bucket_capacity, (
+                f"{valid_entries_in_bucket=} > {self.allowed_bucket_capacity=}"
+            )
             for obj_idx in bucket:
                 if obj_idx >= 0:
-                    assert (
-                        obj_idx < self.total_non_padding_entries
-                    ), f"object ID {obj_idx} >= {self.total_non_padding_entries}"
+                    assert obj_idx < self.total_non_padding_entries, (
+                        f"object ID {obj_idx} >= {self.total_non_padding_entries}"
+                    )
                     assert obj_idx not in all_object_idxs, "object IDs must be unique"
                     all_object_idxs.add(obj_idx)
 
@@ -135,9 +135,9 @@ class MultiplexState:
         # as the actual bucket allocation logic is in add_objects()
         assert num_objects > 0, f"{num_objects=} must be positive"
         if not allow_new_buckets:
-            assert (
-                self.available_slots >= num_objects
-            ), f"not enough available slots {self.available_slots} < {num_objects}"
+            assert self.available_slots >= num_objects, (
+                f"not enough available slots {self.available_slots} < {num_objects}"
+            )
 
         return list(
             range(
@@ -167,14 +167,14 @@ class MultiplexState:
 
         # we will modify this in-place
         object_indices = object_indices.copy()
-        assert (object_ids is None) == (
-            self.object_ids is None
-        ), "object_ids must either be always given or always omitted"
+        assert (object_ids is None) == (self.object_ids is None), (
+            "object_ids must either be always given or always omitted"
+        )
 
         if object_ids is not None:
-            assert len(object_ids) == len(
-                object_indices
-            ), "object_ids must have the same length as object_indices"
+            assert len(object_ids) == len(object_indices), (
+                "object_ids must have the same length as object_indices"
+            )
             object_ids = object_ids.copy()
 
         num_new_objects = len(object_indices)
@@ -225,9 +225,9 @@ class MultiplexState:
         # reinitialize all the settings
         original_num_entries = self.total_valid_entries
         self._initialize_assignments(self.assignments, object_ids=self.object_ids)
-        assert (
-            self.total_valid_entries == original_num_entries + num_new_objects
-        ), f"{self.total_valid_entries=} != {original_num_entries=} + {num_new_objects=}"
+        assert self.total_valid_entries == original_num_entries + num_new_objects, (
+            f"{self.total_valid_entries=} != {original_num_entries=} + {num_new_objects=}"
+        )
 
         logger.info(
             f"Filled {slots_filled} slots and created {buckets_created} new buckets"
@@ -258,9 +258,9 @@ class MultiplexState:
                     object_indices.remove(obj_id)
 
         if strict:
-            assert (
-                len(object_indices) == 0
-            ), f"Failed to remove objects: {object_indices}"
+            assert len(object_indices) == 0, (
+                f"Failed to remove objects: {object_indices}"
+            )
 
         # Check which buckets should be completely removed (all objects removed/paddings)
         # and which buckets we will keep
@@ -371,9 +371,9 @@ class MultiplexState:
             with padding entries filled with 0
         """
         num_valid_entries = x.shape[0]
-        assert (
-            num_valid_entries == self.total_valid_entries
-        ), f"{num_valid_entries=} != {self.total_valid_entries=}"
+        assert num_valid_entries == self.total_valid_entries, (
+            f"{num_valid_entries=} != {self.total_valid_entries=}"
+        )
         output_shape = (
             self.num_buckets,
             self.multiplex_count,
@@ -396,9 +396,9 @@ class MultiplexState:
         """
         num_buckets, multiplex_count = x.shape[:2]
         assert num_buckets == self.num_buckets, f"{num_buckets=} != {self.num_buckets=}"
-        assert (
-            multiplex_count == self.multiplex_count
-        ), f"{multiplex_count=} != {self.multiplex_count=}"
+        assert multiplex_count == self.multiplex_count, (
+            f"{multiplex_count=} != {self.multiplex_count=}"
+        )
         output_shape = (self.total_valid_entries,) + x.shape[2:]
 
         x_flat = x.reshape(num_buckets * multiplex_count, -1)

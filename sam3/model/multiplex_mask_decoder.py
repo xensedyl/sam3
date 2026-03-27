@@ -64,9 +64,9 @@ class MultiplexMaskDecoder(nn.Module):
         )
 
         if self.decode_mask_with_shared_tokens:
-            assert (
-                multimask_outputs_only
-            ), "multimask_outputs_only must be True if decode_mask_with_shared_tokens"
+            assert multimask_outputs_only, (
+                "multimask_outputs_only must be True if decode_mask_with_shared_tokens"
+            )
 
         if self.multimask_outputs_only:
             self.num_mask_output_per_object = num_multimask_outputs
@@ -169,14 +169,14 @@ class MultiplexMaskDecoder(nn.Module):
         """
 
         if self.num_multimask_outputs <= 0:
-            assert (
-                not multimask_output
-            ), f"multimask_output must be False with {self.num_multimask_outputs=}"
+            assert not multimask_output, (
+                f"multimask_output must be False with {self.num_multimask_outputs=}"
+            )
 
         if self.multimask_outputs_only:
-            assert (
-                multimask_output
-            ), f"multimask_output must be True with {self.multimask_outputs_only=}"
+            assert multimask_output, (
+                f"multimask_output must be True with {self.multimask_outputs_only=}"
+            )
 
         out = self.predict_masks(
             image_embeddings=image_embeddings,
@@ -223,19 +223,19 @@ class MultiplexMaskDecoder(nn.Module):
         out["sam_tokens_out"] = sam_tokens_out
 
         if multimask_output:
-            assert (
-                masks.shape[2] == self.num_mask_output_per_object
-            ), f"{masks.shape=}, {self.num_mask_output_per_object=}"
-            assert (
-                iou_pred.shape[2] == self.num_mask_output_per_object
-            ), f"{iou_pred.shape=}, {self.num_mask_output_per_object=}"
+            assert masks.shape[2] == self.num_mask_output_per_object, (
+                f"{masks.shape=}, {self.num_mask_output_per_object=}"
+            )
+            assert iou_pred.shape[2] == self.num_mask_output_per_object, (
+                f"{iou_pred.shape=}, {self.num_mask_output_per_object=}"
+            )
             if self.use_multimask_token_for_obj_ptr:
                 if self.decode_mask_with_shared_tokens:
                     assert sam_tokens_out.shape[2] == 1, f"{sam_tokens_out.shape=}"
                 else:
-                    assert (
-                        sam_tokens_out.shape[2] == self.num_mask_output_per_object
-                    ), f"{sam_tokens_out.shape=}, {self.num_mask_output_per_object=}"
+                    assert sam_tokens_out.shape[2] == self.num_mask_output_per_object, (
+                        f"{sam_tokens_out.shape=}, {self.num_mask_output_per_object=}"
+                    )
         else:
             assert masks.shape[2] == 1, f"{masks.shape=}"
             assert iou_pred.shape[2] == 1, f"{iou_pred.shape=}"
@@ -278,9 +278,9 @@ class MultiplexMaskDecoder(nn.Module):
 
         src = image_embeddings
 
-        assert (
-            image_pe.size(0) == 1
-        ), "image_pe should have size 1 in batch dim (from `get_dense_pe()`)"
+        assert image_pe.size(0) == 1, (
+            "image_pe should have size 1 in batch dim (from `get_dense_pe()`)"
+        )
         pos_src = torch.repeat_interleave(image_pe, tokens.shape[0], dim=0)
         b, c, h, w = src.shape
 
@@ -289,9 +289,9 @@ class MultiplexMaskDecoder(nn.Module):
 
         # Parse transformer outputs based on token sharing configuration
         if self.decode_mask_attribute_with_shared_tokens:
-            assert (
-                hs.shape[1] == self.num_mask_tokens
-            ), f"{hs.shape=}, {self.num_mask_tokens=}"
+            assert hs.shape[1] == self.num_mask_tokens, (
+                f"{hs.shape=}, {self.num_mask_tokens=}"
+            )
             iou_token_out = mask_tokens_out = hs[:, 0 : self.num_mask_tokens]
             if self.pred_obj_scores:
                 obj_score_token_out = mask_tokens_out
@@ -305,9 +305,9 @@ class MultiplexMaskDecoder(nn.Module):
             iou_token_out = hs[:, s : s + self.multiplex_count, :]
             s += self.multiplex_count
             mask_tokens_out = hs[:, s : s + self.num_mask_tokens, :]
-            assert (
-                hs.shape[1] == s + self.num_mask_tokens
-            ), f"{hs.shape=}, {s=}, {self.num_mask_tokens=}"
+            assert hs.shape[1] == s + self.num_mask_tokens, (
+                f"{hs.shape=}, {s=}, {self.num_mask_tokens=}"
+            )
 
         # Upscale mask embeddings and predict masks using the mask tokens
         src = src.transpose(1, 2).view(b, c, h, w)

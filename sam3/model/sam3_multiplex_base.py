@@ -281,7 +281,9 @@ class Sam3MultiplexBase(Sam3VideoBase):
 
         assert (
             self.is_multiplex == self.tracker.is_multiplex == self.detector.is_multiplex
-        ), f"is_multiplex must be the same for all models: {self.is_multiplex=}, {self.tracker.is_multiplex=}, {self.detector.is_multiplex=}"
+        ), (
+            f"is_multiplex must be the same for all models: {self.is_multiplex=}, {self.tracker.is_multiplex=}, {self.detector.is_multiplex=}"
+        )
 
         # hotstart parameters
         if hotstart_delay > 0:
@@ -356,9 +358,9 @@ class Sam3MultiplexBase(Sam3VideoBase):
         )
 
         if self.is_multiplex:
-            assert (
-                not self.tracker.multiplex_controller.training
-            ), "This model class should only be used for eval."
+            assert not self.tracker.multiplex_controller.training, (
+                "This model class should only be used for eval."
+            )
             self.bucket_capacity: int = (
                 self.tracker.multiplex_controller.allowed_bucket_capacity
             )
@@ -1417,9 +1419,9 @@ class Sam3MultiplexBase(Sam3VideoBase):
 
         binary_tracker_low_res_masks_global = tracker_low_res_masks_global > 0
         if batch_size > 0:
-            assert (
-                len(obj_ids_global) == batch_size
-            ), f"Mismatch in number of objects: {len(obj_ids_global)} vs {batch_size}"
+            assert len(obj_ids_global) == batch_size, (
+                f"Mismatch in number of objects: {len(obj_ids_global)} vs {batch_size}"
+            )
             NEVER_OCCLUDED = -1
             ALWAYS_OCCLUDED = 100000  # This value should be larger than any possible frame index, indicates that the object was removed by hotstart logic
 
@@ -1595,9 +1597,9 @@ class Sam3MultiplexBase(Sam3VideoBase):
         reverse: bool = False,
     ):
         # Suppress overlapping masks for objects that were most recently occluded
-        assert (
-            binary_low_res_masks.dtype == torch.bool
-        ), f"Expected boolean tensor, got {binary_low_res_masks.dtype}"
+        assert binary_low_res_masks.dtype == torch.bool, (
+            f"Expected boolean tensor, got {binary_low_res_masks.dtype}"
+        )
         to_suppress = torch.zeros(
             binary_low_res_masks.size(0),
             device=binary_low_res_masks.device,
@@ -1721,9 +1723,9 @@ class Sam3MultiplexBase(Sam3VideoBase):
                     num_frames_propagated += 1
 
             # only 1 frames should be propagated
-            assert (
-                num_frames_propagated == 1 and out_frame_idx == frame_idx
-            ), f"num_frames_propagated: {num_frames_propagated}, out_frame_idx: {out_frame_idx}, frame_idx: {frame_idx}"
+            assert num_frames_propagated == 1 and out_frame_idx == frame_idx, (
+                f"num_frames_propagated: {num_frames_propagated}, out_frame_idx: {out_frame_idx}, frame_idx: {frame_idx}"
+            )
             assert isinstance(out_obj_ids, list)
             # Optionally filter to a subset of object ids (for partial propagation).
             # We also clamp indices to available rows to avoid CUDA index_select assertions.
@@ -1867,9 +1869,9 @@ class Sam3MultiplexBase(Sam3VideoBase):
 
         assert det_masks.is_floating_point(), "float tensor expected (do not binarize)"
         assert trk_masks.is_floating_point(), "float tensor expected (do not binarize)"
-        assert (
-            trk_masks.size(0) == len(trk_obj_ids)
-        ), f"trk_masks and trk_obj_ids should have the same length, {trk_masks.size(0)} vs {len(trk_obj_ids)}"
+        assert trk_masks.size(0) == len(trk_obj_ids), (
+            f"trk_masks and trk_obj_ids should have the same length, {trk_masks.size(0)} vs {len(trk_obj_ids)}"
+        )
         if trk_masks.size(0) == 0:
             with torch.profiler.record_function("No tracklets"):
                 num_trk = 0
@@ -2105,9 +2107,9 @@ class Sam3MultiplexBase(Sam3VideoBase):
         # New objects are added via extend_gpu_metadata_for_new_objects AFTER compaction,
         # so prev_N_obj should already include objects detected on previous frame.
         # N_obj should equal prev_N_obj (no new objects mid-planning-phase).
-        assert (
-            N_obj == prev_N_obj
-        ), f"N_obj ({N_obj}) should equal prev_N_obj ({prev_N_obj}); new objects handled after compaction"
+        assert N_obj == prev_N_obj, (
+            f"N_obj ({N_obj}) should equal prev_N_obj ({prev_N_obj}); new objects handled after compaction"
+        )
 
         # Carry forward existing metadata (or initialize if first frame)
         NEVER_OCCLUDED = -1

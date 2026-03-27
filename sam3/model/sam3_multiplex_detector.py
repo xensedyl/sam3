@@ -37,9 +37,9 @@ class Sam3MultiplexImageBase(Sam3Image):
         input: BatchedDatapoint,
         is_inference=False,  # (a dummy parameter not used anymore)
     ):
-        assert (
-            not self.training
-        ), "Sam3MultiplexImageBase should only be used in eval mode."
+        assert not self.training, (
+            "Sam3MultiplexImageBase should only be used in eval mode."
+        )
 
         device = self.device
         backbone_out = {"img_batch_all_stages": input.img_batch}

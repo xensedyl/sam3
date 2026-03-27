@@ -185,9 +185,9 @@ class SAM3VLBackboneTri(SAM3VLBackbone):
         super().__init__(
             visual=visual, text=text, compile_visual=compile_visual, scalp=scalp
         )
-        assert isinstance(
-            self.vision_backbone, Sam3TriViTDetNeck
-        ), f"Expected vision backbone to be of type Sam3TriViTDetNeck, got {type(self.vision_backbone)}"
+        assert isinstance(self.vision_backbone, Sam3TriViTDetNeck), (
+            f"Expected vision backbone to be of type Sam3TriViTDetNeck, got {type(self.vision_backbone)}"
+        )
 
     def forward_image(
         self,
@@ -356,9 +356,9 @@ class TriHeadVisionOnly(VisionOnly):
             compile_mode=compile_mode,
             compile_extra_args=compile_extra_args,
         )
-        assert isinstance(
-            self.vision_backbone, Sam3TriViTDetNeck
-        ), f"Expected vision backbone to be of type Sam3TriViTDetNeck, got {type(self.vision_backbone)}"
+        assert isinstance(self.vision_backbone, Sam3TriViTDetNeck), (
+            f"Expected vision backbone to be of type Sam3TriViTDetNeck, got {type(self.vision_backbone)}"
+        )
 
     def forward_image(
         self,

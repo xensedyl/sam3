@@ -68,9 +68,9 @@ class SimpleMaskDownSampler(nn.Module):
         self.multiplex_count = multiplex_count
         self.interpol_size = interpol_size
         if self.interpol_size is not None:
-            assert isinstance(
-                self.interpol_size, (list, tuple)
-            ), f"Unsupported type {type(self.interpol_size)}. Should be a list or tuple."
+            assert isinstance(self.interpol_size, (list, tuple)), (
+                f"Unsupported type {type(self.interpol_size)}. Should be a list or tuple."
+            )
             self.interpol_size = list(interpol_size)
             assert len(self.interpol_size) == 2
 

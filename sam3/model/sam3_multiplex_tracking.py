@@ -1250,9 +1250,9 @@ class Sam3MultiplexTracking(Sam3MultiplexBase):
         # Update with refined masks if provided
         if refined_obj_id_to_mask is not None:
             for obj_id, refined_mask in refined_obj_id_to_mask.items():
-                assert (
-                    refined_mask is not None
-                ), f"Refined mask data must be provided for obj_id {obj_id}"
+                assert refined_mask is not None, (
+                    f"Refined mask data must be provided for obj_id {obj_id}"
+                )
                 obj_id_to_mask[obj_id] = refined_mask
 
         return obj_id_to_mask
@@ -1678,18 +1678,18 @@ class Sam3MultiplexTracking(Sam3MultiplexBase):
 
         device = inference_state["device"]
         num_frames = inference_state["num_frames"]
-        assert (
-            text_str is not None or points is not None or boxes_xywh is not None
-        ), "at least one type of prompt (text, points, boxes) must be provided"
-        assert (
-            0 <= frame_idx < num_frames
-        ), f"{frame_idx=} is out of range for a total of {num_frames} frames"
+        assert text_str is not None or points is not None or boxes_xywh is not None, (
+            "at least one type of prompt (text, points, boxes) must be provided"
+        )
+        assert 0 <= frame_idx < num_frames, (
+            f"{frame_idx=} is out of range for a total of {num_frames} frames"
+        )
 
         assert clear_old_boxes, "clear old boxes must be True"
 
-        assert (
-            points is None and clear_old_points is True and point_labels is None
-        ), "Point prompts not accepted"
+        assert points is None and clear_old_points is True and point_labels is None, (
+            "Point prompts not accepted"
+        )
 
         # since it's a semantic prompt, we start over
         self.reset_state(inference_state)
@@ -2484,9 +2484,9 @@ class Sam3MultiplexTrackingWithInteractivity(Sam3MultiplexTracking):
             "propagation_fetch",
             "propagation_cancel",
         ]
-        assert (
-            action_type in instance_actions + propagation_actions
-        ), f"Invalid action type: {action_type}, must be one of {instance_actions + propagation_actions}"
+        assert action_type in instance_actions + propagation_actions, (
+            f"Invalid action type: {action_type}, must be one of {instance_actions + propagation_actions}"
+        )
         action = {
             "type": action_type,
             "frame_idx": frame_idx,
@@ -2518,7 +2518,7 @@ class Sam3MultiplexTrackingWithInteractivity(Sam3MultiplexTracking):
         ):
             # last action is cancel, we go back to the action before cancel
             action_before_cancelation = inference_state["action_history"][-2]
-            # the action before cancelation can be a propagation_fetch from running both forward
+            # the action before cancellation can be a propagation_fetch from running both forward
             # and backward propagation as in webdemo interface, in that case we go back one more step
             if action_before_cancelation["type"] == "propagation_fetch":
                 action_before_cancelation = inference_state["action_history"][-3]
@@ -2700,12 +2700,12 @@ class Sam3MultiplexTrackingWithInteractivity(Sam3MultiplexTracking):
     ):
         if points is not None:
             # SAM2 instance prompts
-            assert (
-                text_str is None and boxes_xywh is None
-            ), "When points are provided, text_str and boxes_xywh must be None."
-            assert (
-                obj_id is not None
-            ), "When points are provided, obj_id must be provided."
+            assert text_str is None and boxes_xywh is None, (
+                "When points are provided, text_str and boxes_xywh must be None."
+            )
+            assert obj_id is not None, (
+                "When points are provided, obj_id must be provided."
+            )
             return self.add_sam2_new_points(
                 inference_state,
                 frame_idx,
@@ -2846,9 +2846,9 @@ class Sam3MultiplexTrackingWithInteractivity(Sam3MultiplexTracking):
                 tracker_states = self._get_sam2_inference_states_by_obj_ids(
                     inference_state, [obj_id]
                 )
-                assert (
-                    len(tracker_states) == 1
-                ), f"[rank={self.rank}] Multiple SAM2 inference states found for the same object id."
+                assert len(tracker_states) == 1, (
+                    f"[rank={self.rank}] Multiple SAM2 inference states found for the same object id."
+                )
                 sam2_state = tracker_states[0]
 
             # log
