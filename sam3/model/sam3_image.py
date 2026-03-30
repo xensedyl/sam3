@@ -495,6 +495,100 @@ class Sam3Image(torch.nn.Module):
             self._compute_matching(out, self.back_convert(find_target))
         return out
 
+    def forward_grounding_detect_only(
+        self,
+        backbone_out,
+        find_input,
+        geometric_prompt: Prompt,
+    ):
+        """Like forward_grounding but skips the segmentation head (no masks).
+
+        Returns (out, grounding_state) where:
+          - out contains pred_logits, pred_boxes, pred_boxes_xyxy (no pred_masks)
+          - grounding_state has intermediate tensors for forward_segmentation_from_state()
+        """
+        with torch.profiler.record_function("SAM3Image._encode_prompt"):
+            prompt, prompt_mask, backbone_out = self._encode_prompt(
+                backbone_out, find_input, geometric_prompt
+            )
+        with torch.profiler.record_function("SAM3Image._run_encoder"):
+            backbone_out, encoder_out, _ = self._run_encoder(
+                backbone_out, find_input, prompt, prompt_mask
+            )
+        out = {
+            "encoder_hidden_states": encoder_out["encoder_hidden_states"],
+            "prev_encoder_out": {
+                "encoder_out": encoder_out,
+                "backbone_out": backbone_out,
+            },
+        }
+        with torch.profiler.record_function("SAM3Image._run_decoder"):
+            out, hs = self._run_decoder(
+                memory=out["encoder_hidden_states"],
+                pos_embed=encoder_out["pos_embed"],
+                src_mask=encoder_out["padding_mask"],
+                out=out,
+                prompt=prompt,
+                prompt_mask=prompt_mask,
+                encoder_out=encoder_out,
+            )
+
+        grounding_state = {
+            "hs": hs,
+            "backbone_out": backbone_out,
+            "img_ids": find_input.img_ids,
+            "vis_feat_sizes": encoder_out["vis_feat_sizes"],
+            "prompt": prompt,
+            "prompt_mask": prompt_mask,
+        }
+        return out, grounding_state
+
+    def forward_segmentation_from_state(
+        self,
+        det_out,
+        grounding_state,
+        query_indices=None,
+    ):
+        """Run the segmentation (mask) head using state from detect-only pass.
+
+        Args:
+            det_out: Detection output dict from forward_grounding_detect_only.
+            grounding_state: Intermediate state from forward_grounding_detect_only.
+            query_indices: Optional tensor of batch indices to generate masks for.
+                If None, generates masks for all queries.
+
+        Returns:
+            seg_out dict with pred_masks for the selected queries.
+        """
+        hs = grounding_state["hs"]
+        backbone_out = grounding_state["backbone_out"]
+        img_ids = grounding_state["img_ids"]
+        vis_feat_sizes = grounding_state["vis_feat_sizes"]
+        encoder_hidden_states = det_out["encoder_hidden_states"]
+        prompt = grounding_state["prompt"]
+        prompt_mask = grounding_state["prompt_mask"]
+
+        if query_indices is not None:
+            hs = hs[:, query_indices]
+            img_ids = img_ids[query_indices]
+            encoder_hidden_states = encoder_hidden_states[:, query_indices]
+            prompt = prompt[:, query_indices]
+            prompt_mask = prompt_mask[query_indices]
+
+        seg_out: Dict = {"encoder_hidden_states": encoder_hidden_states}
+        with torch.profiler.record_function("SAM3Image._run_segmentation_heads"):
+            self._run_segmentation_heads(
+                out=seg_out,
+                backbone_out=backbone_out,
+                img_ids=img_ids,
+                vis_feat_sizes=vis_feat_sizes,
+                encoder_hidden_states=encoder_hidden_states,
+                prompt=prompt,
+                prompt_mask=prompt_mask,
+                hs=hs,
+            )
+        return seg_out
+
     def _postprocess_out(self, out: Dict, multimask_output: bool = False):
         # For multimask output, during eval we return the single best mask with the dict keys expected by the evaluators, but also return the multimasks output with new keys.
         num_mask_boxes = out["pred_boxes"].size(1)
