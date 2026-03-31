@@ -1734,9 +1734,9 @@ class VideoTrackingMultiplexDemo(VideoTrackingDynamicMultiplex):
                 )
                 inference_state["multiplex_state"] = multiplex_state
             else:
-                assert (
-                    self.is_dynamic_model
-                ), "New objects are not allowed after state creation"
+                assert self.is_dynamic_model, (
+                    "New objects are not allowed after state creation"
+                )
 
         for i in range(num_objects):
             mask_inputs_per_frame[i][frame_idx] = mask_inputs_video_res[i : i + 1]
