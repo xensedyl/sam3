@@ -48,7 +48,9 @@ class TestLoadVideoFramesRouting(unittest.TestCase):
         self.assertEqual(result, ("frames", 480, 640))
 
     @patch("sam3.model.io_utils.load_video_frames_from_video_file")
-    def test_extensionless_bare_hash_routes_to_video_loader(self, mock_load_video):
+    def test_extensionless_bare_hash_routes_to_video_loader(
+        self, mock_load_video: MagicMock
+    ) -> None:
         """Bare hash paths without extension should attempt video loading."""
         mock_load_video.return_value = ("frames", 480, 640)
         result = load_video_frames(
@@ -96,7 +98,9 @@ class TestLoadVideoFramesRouting(unittest.TestCase):
         self.assertEqual(w, 640)
 
     @patch("sam3.model.io_utils.load_video_frames_from_video_file")
-    def test_unknown_extension_routes_to_video_loader(self, mock_load_video):
+    def test_unknown_extension_routes_to_video_loader(
+        self, mock_load_video: MagicMock
+    ) -> None:
         """Paths with unrecognized extensions should attempt video loading."""
         mock_load_video.return_value = ("frames", 480, 640)
         result = load_video_frames(
