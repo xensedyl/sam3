@@ -25,7 +25,9 @@ class TestLoadVideoFramesRouting(unittest.TestCase):
         self.assertEqual(result, ("frames", 480, 640))
 
     @patch("sam3.model.io_utils.load_video_frames_from_video_file")
-    def test_mov_extension_routes_to_video_loader(self, mock_load_video):
+    def test_mov_extension_routes_to_video_loader(
+        self, mock_load_video: MagicMock
+    ) -> None:
         """Paths with .mov extension should route to load_video_frames_from_video_file."""
         mock_load_video.return_value = ("frames", 480, 640)
         load_video_frames(
