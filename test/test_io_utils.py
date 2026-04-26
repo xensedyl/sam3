@@ -77,7 +77,9 @@ class TestLoadVideoFramesRouting(unittest.TestCase):
         self.assertIn("oil://fb_permanent/corrupted_file", str(ctx.exception))
 
     @patch("sam3.model.io_utils.load_video_frames_from_image_folder")
-    def test_directory_routes_to_image_folder_loader(self, mock_load_folder):
+    def test_directory_routes_to_image_folder_loader(
+        self, mock_load_folder: MagicMock
+    ) -> None:
         """Directory paths should route to load_video_frames_from_image_folder."""
         mock_load_folder.return_value = ("frames", 480, 640)
         with tempfile.TemporaryDirectory() as tmpdir:
