@@ -7,7 +7,9 @@ import os
 import queue
 import re
 import time
+import types
 from threading import Condition, get_ident, Lock, Thread
+from typing import Optional
 
 import numpy as np
 import torch
@@ -492,7 +494,7 @@ class FIFOLock:
         self._waiters = queue.Queue()
         self._condition = Condition()
 
-    def acquire(self):
+    def acquire(self) -> None:
         ident = get_ident()
         with self._condition:
             self._waiters.put(ident)
@@ -511,7 +513,12 @@ class FIFOLock:
     def __enter__(self):
         self.acquire()
 
-    def __exit__(self, t, v, tb):
+    def __exit__(
+        self,
+        t: Optional[type[BaseException]],
+        v: Optional[BaseException],
+        tb: Optional[types.TracebackType],
+    ) -> None:
         self.release()
 
 
