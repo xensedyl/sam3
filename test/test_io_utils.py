@@ -13,7 +13,9 @@ class TestLoadVideoFramesRouting(unittest.TestCase):
     """Test that load_video_frames routes paths correctly based on extension."""
 
     @patch("sam3.model.io_utils.load_video_frames_from_video_file")
-    def test_mp4_extension_routes_to_video_loader(self, mock_load_video):
+    def test_mp4_extension_routes_to_video_loader(
+        self, mock_load_video: MagicMock
+    ) -> None:
         """Paths with .mp4 extension should route to load_video_frames_from_video_file."""
         mock_load_video.return_value = ("frames", 480, 640)
         result = load_video_frames(
@@ -38,7 +40,9 @@ class TestLoadVideoFramesRouting(unittest.TestCase):
         mock_load_video.assert_called_once()
 
     @patch("sam3.model.io_utils.load_video_frames_from_video_file")
-    def test_extensionless_oil_path_routes_to_video_loader(self, mock_load_video):
+    def test_extensionless_oil_path_routes_to_video_loader(
+        self, mock_load_video: MagicMock
+    ) -> None:
         """Extensionless OIL paths should attempt video loading (D99228861 fix)."""
         mock_load_video.return_value = ("frames", 480, 640)
         result = load_video_frames(
@@ -64,7 +68,9 @@ class TestLoadVideoFramesRouting(unittest.TestCase):
         self.assertEqual(result, ("frames", 480, 640))
 
     @patch("sam3.model.io_utils.load_video_frames_from_video_file")
-    def test_extensionless_path_raises_on_decode_failure(self, mock_load_video):
+    def test_extensionless_path_raises_on_decode_failure(
+        self, mock_load_video: MagicMock
+    ) -> None:
         """Extensionless path that fails to decode should raise NotImplementedError."""
         mock_load_video.side_effect = RuntimeError("Could not decode video")
         with self.assertRaises(NotImplementedError) as ctx:
@@ -90,7 +96,7 @@ class TestLoadVideoFramesRouting(unittest.TestCase):
             )
             mock_load_folder.assert_called_once()
 
-    def test_dummy_video_pattern(self):
+    def test_dummy_video_pattern(self) -> None:
         """<load-dummy-video-N> pattern should return dummy frames."""
         frames, h, w = load_video_frames(
             video_path="<load-dummy-video-5>",
