@@ -93,12 +93,12 @@ def load_resource_as_video_frames(
 
 
 def load_image_as_single_frame_video(
-    image_path,
-    image_size,
-    offload_video_to_cpu,
-    img_mean=(0.5, 0.5, 0.5),
-    img_std=(0.5, 0.5, 0.5),
-):
+    image_path: str,
+    image_size: int,
+    offload_video_to_cpu: bool,
+    img_mean: tuple[float, float, float] = (0.5, 0.5, 0.5),
+    img_std: tuple[float, float, float] = (0.5, 0.5, 0.5),
+) -> tuple[torch.Tensor, int, int]:
     """Load an image as a single-frame video."""
     images, image_height, image_width = _load_img_as_tensor(image_path, image_size)
     images = images.unsqueeze(0).half()
@@ -470,7 +470,7 @@ class TorchCodecDecoder:
     def __len__(self) -> int:
         return self._num_frames
 
-    def __getitem__(self, key: int):
+    def __getitem__(self, key: int) -> torch.Tensor:
         from torchcodec import _core as core
 
         if key < 0:
