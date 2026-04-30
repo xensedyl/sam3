@@ -301,7 +301,17 @@ class Sam3BasePredictor:
         return {"is_success": True}
 
     def close_session(self, session_id, run_gc_collect=True):
-        """Close a session. Idempotent."""
+        """Close a session. Idempotent.
+
+        ``run_gc_collect=True`` (the default) also returns the session's
+        freed CUDA tensors back to the device by calling
+        ``torch.cuda.empty_cache()`` after ``gc.collect()``. Without this,
+        PyTorch's caching allocator retains the freed allocations in its
+        per-process pool, so ``cuda.memory_reserved()`` (and the
+        ``dyno.twtask.gpu_memory_utilization_avg`` metric derived from it)
+        keeps climbing across long-running workloads even though the
+        Python-level objects are gone.
+        """
         session = self._all_inference_states.pop(session_id, None)
         if session is None:
             logger.warning(f"cannot close session {session_id} as it does not exist")
@@ -309,6 +319,8 @@ class Sam3BasePredictor:
             del session
             if run_gc_collect:
                 gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
             logger.info(f"removed session {session_id}")
         return {"is_success": True}
 
