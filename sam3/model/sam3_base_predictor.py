@@ -19,6 +19,15 @@ from sam3.logger import get_logger
 
 logger = get_logger(__name__)
 
+# torch.cuda.empty_cache() forces a CUDA synchronization that stalls all
+# streams in the process. Calling it on every close_session produces visible
+# compute-utilization gaps when many sessions are active concurrently.
+# Gate the call on device memory pressure: only fire when usage crosses the
+# threshold. The allocator's caching pool already covers the common case
+# where freed blocks get reused by the next session — empty_cache is only
+# needed to keep memory from growing unbounded.
+_MAX_MEMORY_PCT = 85
+
 
 class Sam3BasePredictor:
     """
@@ -307,10 +316,11 @@ class Sam3BasePredictor:
         freed CUDA tensors back to the device by calling
         ``torch.cuda.empty_cache()`` after ``gc.collect()``. Without this,
         PyTorch's caching allocator retains the freed allocations in its
-        per-process pool, so ``cuda.memory_reserved()`` (and the
-        ``dyno.twtask.gpu_memory_utilization_avg`` metric derived from it)
-        keeps climbing across long-running workloads even though the
-        Python-level objects are gone.
+        per-process pool, so reserved memory keeps climbing across
+        long-running workloads even though the Python-level objects are gone.
+
+        ``empty_cache()`` itself triggers a CUDA sync, so it is gated on
+        device memory pressure — see ``_should_empty_cache``.
         """
         session = self._all_inference_states.pop(session_id, None)
         if session is None:
@@ -319,10 +329,28 @@ class Sam3BasePredictor:
             del session
             if run_gc_collect:
                 gc.collect()
-                if torch.cuda.is_available():
+                if torch.cuda.is_available() and self._should_empty_cache():
                     torch.cuda.empty_cache()
             logger.info(f"removed session {session_id}")
         return {"is_success": True}
+
+    def _should_empty_cache(self) -> bool:
+        """Whether close_session should call ``torch.cuda.empty_cache()``.
+
+        Fires only when device memory usage is at or above
+        ``_MAX_MEMORY_PCT``. Below that threshold, the caching allocator's
+        freed blocks remain available for the next session and the CUDA
+        sync from empty_cache is avoided.
+        """
+        try:
+            free, total = torch.cuda.mem_get_info()
+        except RuntimeError:
+            # No active CUDA context (e.g., CPU-only test env).
+            return False
+        if total <= 0:
+            return False
+        used_pct = (1.0 - free / total) * 100
+        return used_pct >= _MAX_MEMORY_PCT
 
     def _get_session(self, session_id):
         session = self._all_inference_states.get(session_id, None)
