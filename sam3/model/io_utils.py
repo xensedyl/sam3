@@ -361,7 +361,9 @@ def load_dummy_video(image_size, offload_video_to_cpu, num_frames=60, do_zeros=F
     return images, video_height, video_width
 
 
-def _load_img_as_tensor(img_path, image_size):
+def _load_img_as_tensor(
+    img_path: str, image_size: int
+) -> tuple[torch.Tensor, int, int]:
     """Load and resize an image and convert it into a PyTorch tensor."""
     img = Image.open(img_path).convert("RGB")
     orig_width, orig_height = img.width, img.height
@@ -532,15 +534,15 @@ class AsyncVideoFileLoaderWithTorchCodec:
 
     def __init__(
         self,
-        video_path,
-        image_size,
-        offload_video_to_cpu,
-        img_mean,
-        img_std,
-        gpu_acceleration=True,
-        gpu_device=None,
-        use_rand_seek_in_loading=False,
-    ):
+        video_path: str,
+        image_size: int,
+        offload_video_to_cpu: bool,
+        img_mean: Union[tuple[float, float, float], torch.Tensor],
+        img_std: Union[tuple[float, float, float], torch.Tensor],
+        gpu_acceleration: bool = True,
+        gpu_device: Optional[torch.device] = None,
+        use_rand_seek_in_loading: bool = False,
+    ) -> None:
         # Check and possibly infer the output device (and also get its GPU id when applicable)
         assert gpu_device is None or gpu_device.type == "cuda"
         gpu_id = (
