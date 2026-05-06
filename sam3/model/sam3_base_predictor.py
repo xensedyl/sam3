@@ -26,7 +26,7 @@ logger = get_logger(__name__)
 # threshold. The allocator's caching pool already covers the common case
 # where freed blocks get reused by the next session — empty_cache is only
 # needed to keep memory from growing unbounded.
-_MAX_MEMORY_PCT = 85
+_CLEAR_CACHE_THRESHOLD = 80
 
 
 class Sam3BasePredictor:
@@ -89,6 +89,9 @@ class Sam3BasePredictor:
             return self.close_session(
                 session_id=request["session_id"],
                 run_gc_collect=request.get("run_gc_collect", True),
+                clear_cache_threshold=int(
+                    request.get("clear_cache_threshold", _CLEAR_CACHE_THRESHOLD)
+                ),
             )
         else:
             raise RuntimeError(f"invalid request type: {request_type}")
@@ -309,7 +312,12 @@ class Sam3BasePredictor:
         self.model.reset_state(inference_state)
         return {"is_success": True}
 
-    def close_session(self, session_id, run_gc_collect=True):
+    def close_session(
+        self,
+        session_id,
+        run_gc_collect=True,
+        clear_cache_threshold: int = _CLEAR_CACHE_THRESHOLD,
+    ):
         """Close a session. Idempotent.
 
         ``run_gc_collect=True`` (the default) also returns the session's
@@ -320,7 +328,8 @@ class Sam3BasePredictor:
         long-running workloads even though the Python-level objects are gone.
 
         ``empty_cache()`` itself triggers a CUDA sync, so it is gated on
-        device memory pressure — see ``_should_empty_cache``.
+        device memory pressure — see ``_should_empty_cache``. Callers can
+        override the threshold per-call via ``clear_cache_threshold``.
         """
         session = self._all_inference_states.pop(session_id, None)
         if session is None:
@@ -329,18 +338,20 @@ class Sam3BasePredictor:
             del session
             if run_gc_collect:
                 gc.collect()
-                if torch.cuda.is_available() and self._should_empty_cache():
+                if torch.cuda.is_available() and self._should_empty_cache(
+                    clear_cache_threshold
+                ):
                     torch.cuda.empty_cache()
             logger.info(f"removed session {session_id}")
         return {"is_success": True}
 
-    def _should_empty_cache(self) -> bool:
+    def _should_empty_cache(self, clear_cache_threshold: int) -> bool:
         """Whether close_session should call ``torch.cuda.empty_cache()``.
 
         Fires only when device memory usage is at or above
-        ``_MAX_MEMORY_PCT``. Below that threshold, the caching allocator's
-        freed blocks remain available for the next session and the CUDA
-        sync from empty_cache is avoided.
+        ``clear_cache_threshold``. Below that threshold, the caching
+        allocator's freed blocks remain available for the next session
+        and the CUDA sync from empty_cache is avoided.
         """
         try:
             free, total = torch.cuda.mem_get_info()
@@ -350,7 +361,7 @@ class Sam3BasePredictor:
         if total <= 0:
             return False
         used_pct = (1.0 - free / total) * 100
-        return used_pct >= _MAX_MEMORY_PCT
+        return used_pct >= clear_cache_threshold
 
     def _get_session(self, session_id):
         session = self._all_inference_states.get(session_id, None)
