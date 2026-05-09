@@ -432,7 +432,7 @@ class AsyncImageFrameLoader:
         self.images[index] = img
         return img
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.images)
 
 
@@ -704,7 +704,7 @@ class AsyncVideoFileLoaderWithTorchCodec:
             frame_resized = frame_resized.to(device=self.out_device, non_blocking=True)
         return frame_resized
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> torch.Tensor:
         if self.exception is not None:
             raise RuntimeError("Failure in frame loading thread") from self.exception
 
