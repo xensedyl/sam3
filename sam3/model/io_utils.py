@@ -726,10 +726,10 @@ class AsyncVideoFileLoaderWithTorchCodec:
 
         raise RuntimeError(f"Failed to load frame {index} after {max_tries} tries")
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.images)
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict[str, Any]:
         """
         Remove a few attributes during pickling, so that this async video loader can be
         saved and loaded as a part of the model session.
