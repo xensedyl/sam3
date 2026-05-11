@@ -347,6 +347,43 @@ class Sam3BasePredictor:
         if session is None:
             logger.warning(f"cannot close session {session_id} as it does not exist")
         else:
+            # Explicitly clear the per-session dicts BEFORE ``del session``.
+            #
+            # ``inference_state`` (i.e., ``session["state"]``) is the dict
+            # built by ``init_state`` / ``_construct_initial_input_batch``
+            # and grown by ``add_prompt`` / propagation. It holds heavy
+            # GPU-resident references — ``input_batch`` (the video frames
+            # as a ``BatchedDatapoint`` on device),
+            # ``constants["empty_geometric_prompt"]`` (zeroed device
+            # tensors), and the per-inference accumulators
+            # ``feature_cache``, ``cached_frame_outputs``,
+            # ``tracker_inference_states``, ``tracker_metadata``.
+            #
+            # Empirically, relying on ``del session`` + ``gc.collect()``
+            # alone has been insufficient in prod: across long-lived
+            # IPNext replicas serving thousands of sessions, PyTorch's
+            # *allocated* bucket monotonically climbs to ~93 GiB even
+            # while ``empty_cache`` keeps *reserved-but-unallocated* at
+            # ~600 MiB, leading to OOMs at concurrency=1 (SAM3 client
+            # observation 2026-05-09 / 2026-05-10, jiids
+            # 37154706936429064 and 41658306563594281). The fingerprint:
+            #
+            #     this process has 94.99 GiB memory in use.
+            #     93.54 GiB allocated by PyTorch.
+            #     577.70 MiB reserved by PyTorch but unallocated.
+            #
+            # which is the signature of dict-keyed references staying
+            # alive (allocated bucket, not the cache). Calling ``clear()``
+            # on the nested dict immediately drops all per-session tensor
+            # refs the dict was keying, regardless of whether something
+            # else (closure, asyncio task, metrics buffer, parent
+            # container) is still holding the wrapper dict alive via a
+            # cycle. Lists in the inference state hold ``None``s for
+            # per-frame slots, so they don't need separate handling.
+            state = session.get("state")
+            if isinstance(state, dict):
+                state.clear()
+            session.clear()
             del session
             if run_gc_collect:
                 gc.collect()
