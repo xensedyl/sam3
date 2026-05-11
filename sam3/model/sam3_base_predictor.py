@@ -328,40 +328,106 @@ class Sam3BasePredictor:
         long-running workloads even though the Python-level objects are gone.
 
         ``empty_cache()`` itself triggers a CUDA sync, so it is gated on
-        device memory pressure — see ``_should_empty_cache``. Callers can
+        device memory pressure via the ``gpu_mem`` snapshot. Callers can
         override the threshold per-call via ``clear_cache_threshold``.
+
+        When ``run_gc_collect=True``, the response includes a ``gpu_mem``
+        snapshot (free / total / allocated / reserved bytes, plus active
+        session count) so clients can decide whether the device has
+        headroom for their next session — no separate admission RPC
+        needed. See ``_gpu_mem_snapshot`` for the field shape. The
+        first snapshot (after ``gc.collect()``) drives the cache-eviction
+        decision; if ``empty_cache()`` fires, a second snapshot is taken
+        so the response reflects the post-cleanup state and the freed
+        bytes are logged. Old callers that only read ``is_success`` work
+        unchanged — additional dict keys are ignored at the JSON layer.
         """
         session = self._all_inference_states.pop(session_id, None)
+        result = {"is_success": True}
         if session is None:
             logger.warning(f"cannot close session {session_id} as it does not exist")
         else:
             del session
             if run_gc_collect:
                 gc.collect()
-                if torch.cuda.is_available() and self._should_empty_cache(
-                    clear_cache_threshold
+                gpu_mem = self._gpu_mem_snapshot()
+                if (
+                    torch.cuda.is_available()
+                    and gpu_mem["total_bytes"] > 0
+                    and (100.0 - gpu_mem["free_pct"]) >= clear_cache_threshold
                 ):
                     torch.cuda.empty_cache()
+                    post_gpu_mem = self._gpu_mem_snapshot()
+                    logger.info(
+                        f"empty_cache freed "
+                        f"{post_gpu_mem['free_bytes'] - gpu_mem['free_bytes']} bytes "
+                        f"(free_pct {gpu_mem['free_pct']:.1f}% -> "
+                        f"{post_gpu_mem['free_pct']:.1f}%, reserved "
+                        f"{gpu_mem['reserved_bytes']} -> "
+                        f"{post_gpu_mem['reserved_bytes']} bytes)"
+                    )
+                    gpu_mem = post_gpu_mem
+                result["gpu_mem"] = gpu_mem
             logger.info(f"removed session {session_id}")
-        return {"is_success": True}
+        return result
 
-    def _should_empty_cache(self, clear_cache_threshold: int) -> bool:
-        """Whether close_session should call ``torch.cuda.empty_cache()``.
+    def _gpu_mem_snapshot(self) -> dict:
+        """Snapshot of current GPU memory state for inclusion in
+        session-close responses.
 
-        Fires only when device memory usage is at or above
-        ``clear_cache_threshold``. Below that threshold, the caching
-        allocator's freed blocks remain available for the next session
-        and the CUDA sync from empty_cache is avoided.
+        Lets clients track free HBM across the fleet without a separate
+        admission RPC: every ``close_session`` naturally exposes the
+        post-cleanup state (taken AFTER any ``empty_cache`` call), which
+        is exactly what the next session will face.
+
+        Fields:
+          - ``free_bytes`` / ``total_bytes`` — raw
+            ``torch.cuda.mem_get_info()``.
+          - ``allocated_bytes`` — ``torch.cuda.memory_allocated()``,
+            live tensor footprint (no caching pool overhead).
+          - ``reserved_bytes`` — ``torch.cuda.memory_reserved()``,
+            caching-allocator pool size.
+          - ``free_pct`` — ``free_bytes / total_bytes * 100`` for
+            convenient % thresholds.
+          - ``active_session_count`` — sessions still resident on this
+            predictor instance after the close.
+
+        Fail-open: any error reading the device returns zero stats so
+        a broken CUDA context (e.g., CPU-only test env) NEVER breaks
+        the session-close response.
         """
+        active_count = len(self._all_inference_states)
         try:
-            free, total = torch.cuda.mem_get_info()
+            free_bytes, total_bytes = torch.cuda.mem_get_info()
         except RuntimeError:
             # No active CUDA context (e.g., CPU-only test env).
-            return False
-        if total <= 0:
-            return False
-        used_pct = (1.0 - free / total) * 100
-        return used_pct >= clear_cache_threshold
+            return {
+                "free_bytes": 0,
+                "total_bytes": 0,
+                "allocated_bytes": 0,
+                "reserved_bytes": 0,
+                "free_pct": 0.0,
+                "active_session_count": active_count,
+            }
+        free_pct = (free_bytes / total_bytes) * 100 if total_bytes > 0 else 0.0
+        # ``memory_allocated`` / ``memory_reserved`` are cheap host-side
+        # bookkeeping reads (no CUDA sync) and complement
+        # ``mem_get_info`` by exposing the caching-allocator pool size
+        # vs the actual live tensor footprint.
+        allocated_bytes = (
+            torch.cuda.memory_allocated() if torch.cuda.is_available() else 0
+        )
+        reserved_bytes = (
+            torch.cuda.memory_reserved() if torch.cuda.is_available() else 0
+        )
+        return {
+            "free_bytes": free_bytes,
+            "total_bytes": total_bytes,
+            "allocated_bytes": allocated_bytes,
+            "reserved_bytes": reserved_bytes,
+            "free_pct": free_pct,
+            "active_session_count": active_count,
+        }
 
     def _get_session(self, session_id):
         session = self._all_inference_states.get(session_id, None)
